@@ -14,7 +14,21 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent
 
 # xBD dataset root – override with env var XBD_ROOT or edit below
-DATASET_ROOT = Path(os.environ.get("XBD_ROOT", PROJECT_ROOT / "data" / "raw" / "xBD"))
+# xBD dataset root – override with env var XBD_ROOT or edit below.
+#
+# Supported layouts (auto-detected):
+#   Layout A – Event subdirs (GeoTIFF full download):
+#       <DATASET_ROOT>/<disaster_event>/images/*.png
+#       <DATASET_ROOT>/<disaster_event>/labels/*.json
+#
+#   Layout B – Challenge flat (train_images_labels_targets.tar.gz):
+#       <DATASET_ROOT>/images/<event>_<tile>_pre_disaster.png
+#       <DATASET_ROOT>/labels/<event>_<tile>_pre_disaster.json
+#
+# For the Challenge training download, point DATASET_ROOT at the
+# extracted "train/" directory:
+#   e.g. data/raw/train   or   /content/drive/MyDrive/xBD/train
+DATASET_ROOT = Path(os.environ.get("XBD_ROOT", PROJECT_ROOT / "data" / "raw" / "train"))
 
 PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
 OUTPUTS_DIR   = PROJECT_ROOT / "outputs"

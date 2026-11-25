@@ -186,6 +186,45 @@ def parse_image_pair(
     return matched
 
 
+def _detect_layout(dataset_root: Path) -> str:
+    """
+    Auto-detect xBD directory layout.
+
+    Layout A – GeoTIFF / event-subdirectory (original xBD):
+        <root>/<disaster_event>/images/<tile>_pre_disaster.png
+        <root>/<disaster_event>/labels/<tile>_pre_disaster.json
+
+    Layout B – Challenge flat (train_images_labels_targets.tar.gz):
+        <root>/images/<event>_<tile>_pre_disaster.png
+        <root>/labels/<event>_<tile>_pre_disaster.json
+
+    Returns 'flat' or 'event_subdirs'.
+    """
+    flat_images = dataset_root / "images"
+    flat_labels = dataset_root / "labels"
+    if flat_images.is_dir() and flat_labels.is_dir():
+        return "flat"
+    return "event_subdirs"
+
+
+def _extract_event_from_stem(stem: str) -> str:
+    """
+    For the flat challenge layout, the filename is:
+        <disaster-event>_<tile_id>_pre_disaster   (stem after removing suffix)
+    The tile_id is a zero-padded 8-digit number.
+    Example: 'hurricane-harvey_00000013' → event = 'hurricane-harvey'
+    """
+    parts = stem.rsplit("_", 1)         # split on last underscore
+    if len(parts) == 2 and parts[1].isdigit():
+        return parts[0]
+    # Try splitting on first occurrence of an 8-digit segment
+    import re
+    m = re.match(r"^(.+?)_(\d{8})$", stem)
+    if m:
+        return m.group(1)
+    return stem                         # fallback: use whole stem
+
+
 def collect_dataset_pairs(
     dataset_root: Path,
     label_map: Optional[Dict[str, Optional[int]]] = None,
@@ -195,24 +234,29 @@ def collect_dataset_pairs(
     """
     Walk the entire xBD dataset_root and collect ALL matched building records.
 
-    Expected xBD directory layout:
-        <dataset_root>/
-          <disaster_event>/
-            images/
-              <tile>_pre_disaster.png
-              <tile>_post_disaster.png
-            labels/
-              <tile>_pre_disaster.json
-              <tile>_post_disaster.json
+    Automatically detects two supported directory layouts:
+
+    Layout A – Event subdirectories (GeoTIFF / full xBD download):
+        <root>/<disaster_event>/images/<tile>_pre_disaster.png
+        <root>/<disaster_event>/labels/<tile>_pre_disaster.json
+
+    Layout B – Flat Challenge format (train_images_labels_targets.tar.gz):
+        <root>/images/<event>_<tile>_pre_disaster.png
+        <root>/labels/<event>_<tile>_pre_disaster.json
 
     Returns list of records each containing image paths + building info.
     """
     records: List[Dict] = []
 
+    layout = _detect_layout(dataset_root)
+    logger.info("Detected xBD layout: '%s' under %s", layout, dataset_root)
+
     label_dir_candidates = list(dataset_root.rglob("*_post_disaster.json"))
     if not label_dir_candidates:
         logger.warning("No xBD annotation files found under %s", dataset_root)
         return records
+
+    logger.info("Found %d post-disaster annotation files", len(label_dir_candidates))
 
     for post_json in sorted(label_dir_candidates):
         stem = post_json.stem.replace("_post_disaster", "")
@@ -220,8 +264,14 @@ def collect_dataset_pairs(
         if not pre_json.exists():
             continue
 
-        # Find corresponding images
-        img_dir = post_json.parent.parent / "images"
+        # ── Locate image files based on detected layout ──────────────────────
+        if layout == "flat":
+            img_dir  = dataset_root / "images"
+            disaster = _extract_event_from_stem(stem)
+        else:
+            img_dir  = post_json.parent.parent / "images"
+            disaster = post_json.parts[-3] if len(post_json.parts) >= 3 else "unknown"
+
         pre_img  = img_dir / f"{stem}_pre_disaster.png"
         post_img = img_dir / f"{stem}_post_disaster.png"
 
@@ -237,7 +287,7 @@ def collect_dataset_pairs(
             continue
 
         buildings = parse_image_pair(pre_json, post_json, img_w, img_h, label_map)
-        disaster  = post_json.parts[-3] if len(post_json.parts) >= 3 else "unknown"
+        # `disaster` already set above based on detected layout
 
         for b in buildings:
             b["pre_image_path"]  = pre_img
