@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb~
+
+# Data – never commit the full xBD dataset
+data/raw/
+data/processed/
+
+# Model weights (use releases or Drive for large files)
+checkpoints/*.pth
+checkpoints/*.onnx
+*.pth
+*.onnx
+
+# Outputs (commit selectively, not bulk)
+outputs/*.png
+outputs/*.txt
+outputs/*.json
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Credentials / keys
+*.env
+.env
+*.key
+secrets.json
+
+# Temporary
+tmp/
+temp/
+*.tmp
+*.log
