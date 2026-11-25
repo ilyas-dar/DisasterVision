@@ -39,15 +39,25 @@ for _d in [PROCESSED_DIR, OUTPUTS_DIR, CHECKPOINT_DIR]:
     _d.mkdir(parents=True, exist_ok=True)
 
 # ─────────────────────────────────────────────
+# ⚡ QUICK-TRAIN MODE  (set MAX_SAMPLES > 0 to cap dataset size)
+# ─────────────────────────────────────────────
+# Set MAX_SAMPLES to a small number (e.g. 3000) to train fast.
+# Set MAX_TILES   to limit how many image tiles are even opened.
+# Both caps are applied before any train/val/test split.
+# Set either to 0 (zero) to use the FULL dataset (no cap).
+MAX_SAMPLES = 3000   # hard cap on total building samples  (0 = unlimited)
+MAX_TILES   = 60     # stop parsing after this many tiles  (0 = unlimited)
+
+# ─────────────────────────────────────────────
 # MODEL / TRAINING HYPER-PARAMETERS
 # ─────────────────────────────────────────────
 IMAGE_SIZE   = 128          # crop resize (px); use 224 for higher accuracy
 BATCH_SIZE   = 32
-NUM_EPOCHS   = 10
+NUM_EPOCHS   = 8            # 8 epochs is enough for a capped subset
 LEARNING_RATE = 1e-4
 WEIGHT_DECAY  = 1e-5
 DROPOUT_RATE  = 0.4
-EARLY_STOP_PATIENCE = 4
+EARLY_STOP_PATIENCE = 3
 BACKBONE     = "resnet18"   # shared Siamese backbone
 
 # ─────────────────────────────────────────────

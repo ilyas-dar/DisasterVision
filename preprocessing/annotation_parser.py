@@ -230,9 +230,11 @@ def collect_dataset_pairs(
     label_map: Optional[Dict[str, Optional[int]]] = None,
     img_w: int = 1024,
     img_h: int = 1024,
+    max_tiles: int = 0,
+    max_samples: int = 0,
 ) -> List[Dict]:
     """
-    Walk the entire xBD dataset_root and collect ALL matched building records.
+    Walk the entire xBD dataset_root and collect matched building records.
 
     Automatically detects two supported directory layouts:
 
@@ -243,6 +245,11 @@ def collect_dataset_pairs(
     Layout B – Flat Challenge format (train_images_labels_targets.tar.gz):
         <root>/images/<event>_<tile>_pre_disaster.png
         <root>/labels/<event>_<tile>_pre_disaster.json
+
+    Parameters
+    ----------
+    max_tiles   : stop after processing this many tiles (0 = no limit)
+    max_samples : stop after collecting this many buildings (0 = no limit)
 
     Returns list of records each containing image paths + building info.
     """
@@ -258,7 +265,16 @@ def collect_dataset_pairs(
 
     logger.info("Found %d post-disaster annotation files", len(label_dir_candidates))
 
+    if max_tiles and max_tiles > 0:
+        label_dir_candidates = label_dir_candidates[:max_tiles]
+        logger.info("MAX_TILES cap: processing %d tiles", max_tiles)
+
+    tiles_processed = 0
     for post_json in sorted(label_dir_candidates):
+        if max_samples and max_samples > 0 and len(records) >= max_samples:
+            logger.info("MAX_SAMPLES cap reached (%d). Stopping.", max_samples)
+            break
+
         stem = post_json.stem.replace("_post_disaster", "")
         pre_json = post_json.parent / f"{stem}_pre_disaster.json"
         if not pre_json.exists():
@@ -296,6 +312,14 @@ def collect_dataset_pairs(
             b["disaster_event"]  = disaster
 
         records.extend(buildings)
+        tiles_processed += 1
 
-    logger.info("Collected %d valid building samples from %s", len(records), dataset_root)
+    # Trim to exact cap if slightly over due to last tile
+    if max_samples and max_samples > 0 and len(records) > max_samples:
+        records = records[:max_samples]
+
+    logger.info(
+        "Collected %d valid building samples from %d tiles (layout=%s)",
+        len(records), tiles_processed, layout
+    )
     return records

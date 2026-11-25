@@ -29,7 +29,7 @@ from config import (
     FINAL_MODEL_PATH, IMAGE_SIZE, LEARNING_RATE, MODEL_CONFIG_PATH,
     NUM_CLASSES, NUM_EPOCHS, PREPROC_CFG_PATH, PROCESSED_DIR,
     RANDOM_SEED, TRAIN_RATIO, VAL_RATIO, WEIGHT_DECAY, XBD_LABEL_MAP,
-    OUTPUTS_DIR,
+    OUTPUTS_DIR, MAX_SAMPLES, MAX_TILES,
 )
 from models.siamese_cnn import SiameseDamageClassifier, save_model_config
 from preprocessing.annotation_parser import collect_dataset_pairs
@@ -124,7 +124,10 @@ def main():
         all_records = load_metadata(meta_path)
     else:
         logger.info("Collecting xBD building pairs from %s", DATASET_ROOT)
-        raw_records = collect_dataset_pairs(DATASET_ROOT, XBD_LABEL_MAP)
+        raw_records = collect_dataset_pairs(
+            DATASET_ROOT, XBD_LABEL_MAP,
+            max_tiles=MAX_TILES, max_samples=MAX_SAMPLES,
+        )
 
         if not raw_records:
             logger.error(
